@@ -542,7 +542,7 @@ UA_PubSubChannelUDPMC_send(UA_PubSubChannel *channel, UA_ExtensionObject *transp
 
 static
 UA_INLINE
-UA_DateTime timevalToDateTime(struct timeval val) {
+UA_DateTime timevalToDateTime(struct UA_timeval val) {
     return val.tv_sec * UA_DATETIME_SEC + val.tv_usec / 100;
 }
 
@@ -566,20 +566,20 @@ UA_PubSubChannelUDPMC_receive(UA_PubSubChannel *channel,
     }
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     UA_UInt16 rcvCount = 0;
-    struct timeval timeoutValue;
-    struct timeval receiveTime;
+    struct UA_timeval timeoutValue;
+    struct UA_timeval receiveTime;
     fd_set fdset;
 
     memset(&timeoutValue, 0, sizeof(timeoutValue));
     memset(&receiveTime, 0, sizeof(receiveTime));
-    FD_ZERO(&fdset);
+    UA_fd_zero(&fdset);
     timeoutValue.tv_sec  = (long int)(timeout / 1000000);
     timeoutValue.tv_usec = (long int)(timeout % 1000000);
     do {
         if(timeout > 0) {
             UA_fd_set(channel->sockfd, &fdset);
             /* Select API will return the remaining time in the struct
-             * timeval */
+             * UA_timeval */
             int resultsize = UA_select(channel->sockfd+1, &fdset, NULL,
                                        NULL, &timeoutValue);
             if(resultsize == 0) {

@@ -21,8 +21,8 @@
 # include <winsock2.h>
 # include <iphlpapi.h>
 # include <ws2tcpip.h>
-#else
-# include <sys/time.h> // for struct timeval
+#elif defined(_LINUX)
+# include <sys/time.h> // for struct UA_timeval
 # include <netinet/in.h> // for struct ip_mreq
 # if defined(UA_HAS_GETIFADDR)
 #  include <ifaddrs.h>

@@ -44,6 +44,10 @@ struct UA_CertificateVerification {
                                           const UA_ByteString *certificate,
                                           const UA_String *applicationURI);
 
+    /* Extract identity mapping roles from certificate */
+    void (*extractIdentityMappingRules)(const UA_ByteString *certificate,
+                                        UA_Variant *variant);
+
     /* Delete the certificate verification context */
     void (*clear)(UA_CertificateVerification *cv);
 };

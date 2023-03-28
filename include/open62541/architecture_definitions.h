@@ -113,10 +113,10 @@ extern UA_THREAD_LOCAL void * (*UA_reallocSingleton)(void *ptr, size_t size);
  * Otherwise revert to alloca. Note that alloca is not supported on some
  * plattforms. */
 #ifndef UA_STACKARRAY
-# if defined(__GNUC__) || defined(__clang__)
+# if defined(__GNUC__) || defined(__clang__) || defined(__IAR_SYSTEMS_ICC__)
 #  define UA_STACKARRAY(TYPE, NAME, SIZE) TYPE NAME[SIZE]
 # else
-# if defined(__GNUC__) || defined(__clang__)
+# if defined(__GNUC__) || defined(__clang__) || defined(__IAR_SYSTEMS_ICC__)
 #  define UA_alloca(size) __builtin_alloca (size)
 # elif defined(_WIN32)
 #  define UA_alloca(SIZE) _alloca(SIZE)
@@ -337,6 +337,10 @@ extern UA_THREAD_LOCAL void * (*UA_reallocSingleton)(void *ptr, size_t size);
 # if defined(_LIL_END)
 #  define UA_LITTLE_ENDIAN 1
 # endif
+#elif defined(__IAR_SYSTEMS_ICC__)
+# if defined(__LITTLE_ENDIAN__)
+#  define UA_LITTLE_ENDIAN 1
+# endif
 #endif
 #ifndef UA_LITTLE_ENDIAN
 # define UA_LITTLE_ENDIAN 0
@@ -387,6 +391,10 @@ UA_STATIC_ASSERT(sizeof(bool) == 1, cannot_overlay_integers_with_large_bool);
 #elif defined(__FLOAT_WORD_ORDER) && defined(__LITTLE_ENDIAN) && \
     (__FLOAT_WORD_ORDER == __LITTLE_ENDIAN) /* Defined only in GCC */
 # define UA_FLOAT_LITTLE_ENDIAN 1
+#elif defined(__IAR_SYSTEMS_ICC__)
+# if defined(__LITTLE_ENDIAN__)
+#  define UA_FLOAT_LITTLE_ENDIAN 1
+# endif
 #endif
 #ifndef UA_FLOAT_LITTLE_ENDIAN
 # define UA_FLOAT_LITTLE_ENDIAN 0
@@ -417,96 +425,96 @@ UA_STATIC_ASSERT(sizeof(bool) == 1, cannot_overlay_integers_with_large_bool);
 
 static UA_INLINE void *
 UA_atomic_xchg(void * volatile * addr, void *newptr) {
-#if UA_MULTITHREADING >= 100
-#ifdef _MSC_VER /* Visual Studio */
+#if UA_MULTITHREADING >= 100 && 0 /* Visual Studio */
     return _InterlockedExchangePointer(addr, newptr);
-#else /* GCC/Clang */
+#elif UA_MULTITHREADING >= 100 && 0 /* GCC/Clang */
     return __sync_lock_test_and_set(addr, newptr);
-#endif
 #else
+    UA_INT_LOCK();
     void *old = *addr;
     *addr = newptr;
+    UA_INT_UNLOCK();
     return old;
 #endif
 }
 
 static UA_INLINE void *
 UA_atomic_cmpxchg(void * volatile * addr, void *expected, void *newptr) {
-#if UA_MULTITHREADING >= 100
-#ifdef _MSC_VER /* Visual Studio */
+#if UA_MULTITHREADING >= 100 && 0 /* Visual Studio */
     return _InterlockedCompareExchangePointer(addr, expected, newptr);
-#else /* GCC/Clang */
+#elif UA_MULTITHREADING >= 100 && 0 /* GCC/Clang */
     return __sync_val_compare_and_swap(addr, expected, newptr);
-#endif
 #else
+    UA_INT_LOCK();
     void *old = *addr;
     if(old == expected) {
         *addr = newptr;
     }
+    UA_INT_UNLOCK();
     return old;
 #endif
 }
 
 static UA_INLINE uint32_t
 UA_atomic_addUInt32(volatile uint32_t *addr, uint32_t increase) {
-#if UA_MULTITHREADING >= 100
-#ifdef _MSC_VER /* Visual Studio */
+#if UA_MULTITHREADING >= 100 && 0 /* Visual Studio */
     return _InterlockedExchangeAdd(addr, increase) + increase;
-#else /* GCC/Clang */
+#elif UA_MULTITHREADING >= 100 && 0 /* GCC/Clang */
     return __sync_add_and_fetch(addr, increase);
-#endif
 #else
+    UA_INT_LOCK();
     uint32_t accu = *addr;
     accu += increase;
     *addr = accu;
+    UA_INT_UNLOCK();
     return accu;
 #endif
 }
 
 static UA_INLINE size_t
 UA_atomic_addSize(volatile size_t *addr, size_t increase) {
-#if UA_MULTITHREADING >= 100
-#ifdef _MSC_VER /* Visual Studio */
+#if UA_MULTITHREADING >= 100 && 0 /* Visual Studio */
     return _InterlockedExchangeAdd(addr, increase) + increase;
-#else /* GCC/Clang */
+#elif UA_MULTITHREADING >= 100 && 0 /* GCC/Clang */
     return __sync_add_and_fetch(addr, increase);
-#endif
 #else
+    UA_INT_LOCK();
     size_t accu = *addr;
     accu += increase;
     *addr = accu;
+    UA_INT_UNLOCK();
     return accu;
 #endif
 }
 
 static UA_INLINE uint32_t
 UA_atomic_subUInt32(volatile uint32_t *addr, uint32_t decrease) {
-#if UA_MULTITHREADING >= 100
-#ifdef _MSC_VER /* Visual Studio */
+#if UA_MULTITHREADING >= 100 && 0 /* Visual Studio */
     return _InterlockedExchangeSub(addr, decrease) - decrease;
-#else /* GCC/Clang */
+#elif UA_MULTITHREADING >= 100 && 0 /* GCC/Clang */
     return __sync_sub_and_fetch(addr, decrease);
-#endif
 #else
+    UA_INT_LOCK();
     uint32_t accu = *addr;
     accu -= decrease;
     *addr = accu;
+    UA_INT_UNLOCK();
     return accu;
 #endif
 }
 
 static UA_INLINE size_t
 UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
-#if UA_MULTITHREADING >= 100
-#ifdef _MSC_VER /* Visual Studio */
+#if UA_MULTITHREADING >= 100 && 0 /* Visual Studio */
     return _InterlockedExchangeSub(addr, decrease) - decrease;
-#else /* GCC/Clang */
+#elif UA_MULTITHREADING >= 100 && 0 /* GCC/Clang */
     return __sync_sub_and_fetch(addr, decrease);
-#endif
 #else
+    UA_INT_LOCK();
     size_t accu = *addr;
     accu -= decrease;
     *addr = accu;
+    UA_INT_UNLOCK();
     return accu;
 #endif
 }

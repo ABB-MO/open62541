@@ -307,7 +307,7 @@ implicitNumericVariantTransformation(UA_Variant *variant, void *data){
     } else if(variant->type == &UA_TYPES[UA_TYPES_DOUBLE]){
         *(UA_Double *)data = *(UA_Double *)variant->data;
         UA_Variant_setScalar(variant, data, &UA_TYPES[UA_TYPES_DOUBLE]);
-    } else if(variant->type == &UA_TYPES[UA_TYPES_SBYTE]){
+    } else if(variant->type == &UA_TYPES[UA_TYPES_FLOAT]){
         *(UA_Double *)data = *(UA_Float *)variant->data;
         UA_Variant_setScalar(variant, data, &UA_TYPES[UA_TYPES_DOUBLE]);
     } else {

@@ -1123,7 +1123,7 @@ UA_PubSubChannelEthernet_receive(UA_PubSubChannel *channel,
     UA_PubSubChannelDataEthernet *channelDataEthernet =
         (UA_PubSubChannelDataEthernet *) channel->handle;
 
-    struct timeval  tmptv;
+    struct UA_timeval  tmptv;
     struct timespec currentTime;
     struct timespec maxTime;
     UA_UInt64       currentTimeValue = 0;
@@ -1137,7 +1137,7 @@ UA_PubSubChannelEthernet_receive(UA_PubSubChannel *channel,
     /* Sleep in a select call if a timeout was set */
     if(timeout > 0) {
         fd_set fdset;
-        FD_ZERO(&fdset);
+        UA_fd_zero(&fdset);
         UA_fd_set(channel->sockfd, &fdset);
         tmptv.tv_sec = (long int)(timeout / 1000000);
         tmptv.tv_usec = (long int)(timeout % 1000000);

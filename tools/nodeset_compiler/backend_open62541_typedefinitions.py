@@ -432,8 +432,9 @@ _UA_BEGIN_DECLS
             self.printh(
                 "extern UA_EXPORT const UA_DataType UA_" + self.parser.outname.upper() + "[UA_" + self.parser.outname.upper() + "_COUNT];")
 
+            i = 0
             for ns in self.filtered_types:
-                for i, t_name in enumerate(self.filtered_types[ns]):
+                for t_name in self.filtered_types[ns]:
                     t = self.filtered_types[ns][t_name]
                     self.printh("\n/**\n * " + t.name)
                     self.printh(" * " + "^" * len(t.name))
@@ -445,6 +446,7 @@ _UA_BEGIN_DECLS
                         self.printh(self.print_datatype_typedef(t) + "\n")
                     self.printh(
                         "#define UA_" + makeCIdentifier(self.parser.outname.upper() + "_" + t.name.upper()) + " " + str(i))
+                    i = i + 1
         else:
             self.printh("#define UA_" + self.parser.outname.upper() + " NULL")
 

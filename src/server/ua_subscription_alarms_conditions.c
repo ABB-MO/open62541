@@ -540,8 +540,10 @@ isConditionOrBranch(UA_Server *server, const UA_NodeId *condition,
                     const UA_NodeId *conditionSource, UA_Boolean *isCallerAC) {
     UA_Condition *cond = getCondition(server, conditionSource, condition);
     if(!cond) {
+#if 0 // Disabled - not considered as error
         UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_USERLAND,
                      "Entry not found in list!");
+#endif
         return false;
     }
 

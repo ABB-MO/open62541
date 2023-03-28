@@ -84,8 +84,10 @@ typedef UA_Byte u8;
 typedef UA_SByte i8;
 typedef UA_UInt16 u16;
 typedef UA_Int16 i16;
-typedef UA_UInt32 u32;
-typedef UA_Int32 i32;
+// typedef UA_UInt32 u32;
+// typedef UA_Int32 i32;
+#define u32 UA_UInt32
+#define i32 UA_Int32
 typedef UA_UInt64 u64;
 typedef UA_Int64 i64;
 typedef UA_StatusCode status;

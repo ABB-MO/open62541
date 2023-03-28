@@ -523,6 +523,27 @@ ReadWithNode(const UA_Node *node, UA_Server *server, UA_Session *session,
 #endif
         retval = UA_STATUSCODE_BADATTRIBUTEIDINVALID;
         break; }
+#ifdef UA_ENABLE_ROLEPERMISSONS
+    case UA_ATTRIBUTEID_ROLEPERMISSIONS:
+        if(!server->config.accessControl.allowReadRolePermissions(
+                          server, &server->config.accessControl,
+                          session ? &session->sessionId : NULL,
+                          session ? session->sessionHandle : NULL,
+                          &node->head.nodeId, node->head.context)) {
+            retval = UA_STATUSCODE_BADUSERACCESSDENIED;
+            break;
+        }
+        retval = UA_Variant_setArrayCopy(&v->value, node->head.rolePermissions,
+                    node->head.rolePermissionsSize, &UA_TYPES[UA_TYPES_ROLEPERMISSIONTYPE]);
+        break;
+    case UA_ATTRIBUTEID_USERROLEPERMISSIONS:
+        v->value = server->config.accessControl.getUserRolePermissions(
+                          server, &server->config.accessControl,
+                          session ? &session->sessionId : NULL,
+                          session ? session->sessionHandle : NULL,
+                          &node->head.nodeId, node->head.context);
+        break;
+#endif // UA_ENABLE_ROLEPERMISSONS
     default:
         retval = UA_STATUSCODE_BADATTRIBUTEIDINVALID;
     }

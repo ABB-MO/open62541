@@ -16,12 +16,12 @@
 
 static void *
 multicastWorkerLoop(UA_Server *server) {
-    struct timeval next_sleep = {.tv_sec = 0, .tv_usec = 0};
+    struct UA_timeval next_sleep = {.tv_sec = 0, .tv_usec = 0};
     volatile UA_Boolean *running = &server->discoveryManager.mdnsRunning;
     fd_set fds;
 
     while(*running) {
-        FD_ZERO(&fds);
+        UA_fd_zero(&fds);
         UA_fd_set(server->discoveryManager.mdnsSocket, &fds);
         select(server->discoveryManager.mdnsSocket + 1, &fds, 0, 0, &next_sleep);
 
@@ -588,7 +588,7 @@ UA_Discovery_removeRecord(UA_Server *server, const UA_String *servername,
 UA_StatusCode
 iterateMulticastDiscoveryServer(UA_Server* server, UA_DateTime *nextRepeat,
                                 UA_Boolean processIn) {
-    struct timeval next_sleep = { 0, 0 };
+    struct UA_timeval next_sleep = { 0, 0 };
     unsigned short retval = mdnsd_step(server->discoveryManager.mdnsDaemon,
                                        (int)server->discoveryManager.mdnsSocket,
                                        processIn, true, &next_sleep);
