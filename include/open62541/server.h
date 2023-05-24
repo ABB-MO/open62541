@@ -840,7 +840,8 @@ UA_Server_browseNext(UA_Server *server, UA_Boolean releaseContinuationPoint,
  * hierarchy below. */
 UA_StatusCode UA_EXPORT UA_THREADSAFE
 UA_Server_browseRecursive(UA_Server *server, const UA_BrowseDescription *bd,
-                          size_t *resultsSize, UA_ExpandedNodeId **results);
+                          size_t *resultsSize, UA_ExpandedNodeId **results, 
+                          UA_Boolean includeStartNodes);
 
 UA_BrowsePathResult UA_EXPORT UA_THREADSAFE
 UA_Server_translateBrowsePathToNodeIds(UA_Server *server,

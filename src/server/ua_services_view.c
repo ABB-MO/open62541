@@ -389,7 +389,8 @@ browseRecursive(UA_Server *server, size_t startNodesSize, const UA_NodeId *start
 
 UA_StatusCode
 UA_Server_browseRecursive(UA_Server *server, const UA_BrowseDescription *bd,
-                          size_t *resultsSize, UA_ExpandedNodeId **results) {
+                          size_t *resultsSize, UA_ExpandedNodeId **results, 
+                          UA_Boolean includeStartNodes) {
     UA_LOCK(&server->serviceMutex);
 
     /* Set the list of relevant reference types */
@@ -403,7 +404,7 @@ UA_Server_browseRecursive(UA_Server *server, const UA_BrowseDescription *bd,
 
     /* Browse */
     retval = browseRecursive(server, 1, &bd->nodeId, bd->browseDirection,
-                             &refTypes, bd->nodeClassMask, false, resultsSize, results);
+                             &refTypes, bd->nodeClassMask, includeStartNodes, resultsSize, results);
 
     UA_UNLOCK(&server->serviceMutex);
     return retval;

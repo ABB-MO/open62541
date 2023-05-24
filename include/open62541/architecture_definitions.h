@@ -416,6 +416,8 @@ UA_STATIC_ASSERT(sizeof(bool) == 1, cannot_overlay_integers_with_large_bool);
 #if UA_MULTITHREADING >= 100
     #ifdef _MSC_VER /* Visual Studio */
     #define UA_atomic_sync() _ReadWriteBarrier()
+    #elif defined(__IAR_SYSTEMS_ICC__)
+    #define UA_atomic_sync() asm volatile ("" : : : "memory")
     #else /* GCC/Clang */
     #define UA_atomic_sync() __sync_synchronize()
     #endif
