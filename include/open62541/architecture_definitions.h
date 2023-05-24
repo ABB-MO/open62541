@@ -414,7 +414,7 @@ UA_STATIC_ASSERT(sizeof(bool) == 1, cannot_overlay_integers_with_large_bool);
  * multithreading). Only the inline-functions defined next are used. Replace
  * with architecture-specific operations if necessary. */
 #if UA_MULTITHREADING >= 100
-    #ifdef _MSC_VER /* Visual Studio */
+    #if defined(_MSC_VER) && !defined(__clang__) /* Visual Studio */
     #define UA_atomic_sync() _ReadWriteBarrier()
     #elif defined(__IAR_SYSTEMS_ICC__)
     #define UA_atomic_sync() asm volatile ("" : : : "memory")

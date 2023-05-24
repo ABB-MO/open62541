@@ -641,6 +641,20 @@ readMonitoredItems(UA_Server *server, const UA_NodeId *sessionId, void *sessionC
 }
 #endif /* defined(UA_ENABLE_METHODCALLS) && defined(UA_ENABLE_SUBSCRIPTIONS) */
 
+#if defined(UA_ENABLE_SERVER_LOCALTIME)
+static UA_StatusCode
+readLocalTime(UA_Server* server, const UA_NodeId* sessionId, void* sessionContext,
+              const UA_NodeId* nodeId, void* nodeContext, UA_Boolean sourceTimeStamp,
+              const UA_NumericRange* range, UA_DataValue* dataValue)
+{
+    UA_TimeZoneDataType timeZone;
+    UA_timezone(&timeZone.offset, &timeZone.daylightSavingInOffset);
+    UA_Variant_setScalarCopy(&dataValue->value, &timeZone, &UA_TYPES[UA_TYPES_TIMEZONEDATATYPE]);
+    dataValue->hasValue = true;
+    return UA_STATUSCODE_GOOD;
+}
+#endif /* defined(UA_ENABLE_SERVER_LOCALTIME) */
+
 UA_StatusCode
 writeNs0VariableArray(UA_Server *server, UA_UInt32 id, void *v,
                       size_t length, const UA_DataType *type) {
@@ -1021,7 +1035,9 @@ UA_Server_initNS0(UA_Server *server) {
 
     /* Remove not supported server configurations */
     UA_Server_deleteNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_ESTIMATEDRETURNTIME), true);
+#ifndef UA_ENABLE_SERVER_LOCALTIME
     UA_Server_deleteNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_LOCALTIME), true);
+#endif
     UA_Server_deleteNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_REQUESTSERVERSTATECHANGE), true);
     UA_Server_deleteNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_RESENDDATA), true);
     UA_Server_deleteNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERCONFIGURATION), true);
@@ -1176,6 +1192,12 @@ UA_Server_initNS0(UA_Server *server) {
 #if defined(UA_ENABLE_METHODCALLS) && defined(UA_ENABLE_SUBSCRIPTIONS)
     retVal |= UA_Server_setMethodNodeCallback(server,
                         UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_GETMONITOREDITEMS), readMonitoredItems);
+#endif
+
+#ifdef UA_ENABLE_SERVER_LOCALTIME
+    UA_DataSource serverLocalTime = {readLocalTime, NULL};
+    retVal |= UA_Server_setVariableNode_dataSource(server,
+                        UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_LOCALTIME), serverLocalTime);
 #endif
 
     /* The HasComponent references to the ModellingRules are not part of the
