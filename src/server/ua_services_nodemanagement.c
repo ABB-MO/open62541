@@ -1012,7 +1012,7 @@ copyRolePermissionsContext(UA_Server *server, UA_Session *session,
     UA_StatusCode u32Status = UA_STATUSCODE_GOOD;
 
     if(NULL != typeNode->head.rolePermissions) {
-        u32Status = UA_Array_copy(typeNode->head.rolePermissions, typeNode->head.rolePermissionsSize, &newNode->head.rolePermissions, &UA_TYPES[UA_TYPES_ROLEPERMISSIONTYPE]);
+        u32Status = UA_Array_copy(typeNode->head.rolePermissions, typeNode->head.rolePermissionsSize, (void**) &newNode->head.rolePermissions, &UA_TYPES[UA_TYPES_ROLEPERMISSIONTYPE]);
         if(UA_STATUSCODE_GOOD == u32Status) {
             newNode->head.rolePermissionsSize = typeNode->head.rolePermissionsSize;
         }
