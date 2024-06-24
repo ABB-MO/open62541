@@ -34,7 +34,6 @@
 #include <open62541/server_config_default.h>
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/types_generated.h>
-#include <open62541/plugin/pubsub_ethernet.h>
 
 #include "ua_pubsub.h"
 #include "open62541/namespace_example_publisher_generated.h"
@@ -209,9 +208,9 @@ changePubSubApplicationCallback(UA_Server *server, UA_NodeId identifier,
 /* Remove the callback added for cyclic repetition */
 static void
 removePubSubApplicationCallback(UA_Server *server, UA_NodeId identifier, UA_UInt64 callbackId){
-    if(callbackId && (pthread_join(callbackId, NULL) != 0))
+    if(callbackId && (pthread_join((pthread_t)callbackId, NULL) != 0))
         UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-                       "Pthread Join Failed thread: %ld\n", callbackId);
+                       "Pthread Join Failed thread: %lu\n", (long unsigned)callbackId);
 }
 
 /**
@@ -257,7 +256,8 @@ addPubSubConnection(UA_Server *server, UA_NetworkAddressUrlDataType *networkAddr
     connectionConfig.transportProfileUri                    = UA_STRING(ETH_TRANSPORT_PROFILE);
     UA_Variant_setScalar(&connectionConfig.address, &networkAddressUrl,
                          &UA_TYPES[UA_TYPES_NETWORKADDRESSURLDATATYPE]);
-    connectionConfig.publisherId.numeric                    = PUBLISHER_ID;
+    connectionConfig.publisherIdType                        = UA_PUBLISHERIDTYPE_UINT16;
+    connectionConfig.publisherId.uint16                     = PUBLISHER_ID;
     /* Connection options are given as Key/Value Pairs - Sockprio and Txtime */
     UA_KeyValuePair connectionOptions[2];
     connectionOptions[0].key = UA_QUALIFIEDNAME(0, "sockpriority");
@@ -266,8 +266,8 @@ addPubSubConnection(UA_Server *server, UA_NetworkAddressUrlDataType *networkAddr
     connectionOptions[1].key = UA_QUALIFIEDNAME(0, "enablesotxtime");
     UA_Boolean enableTxTime  = UA_TRUE;
     UA_Variant_setScalar(&connectionOptions[1].value, &enableTxTime, &UA_TYPES[UA_TYPES_BOOLEAN]);
-    connectionConfig.connectionProperties     = connectionOptions;
-    connectionConfig.connectionPropertiesSize = 2;
+    connectionConfig.connectionProperties.map     = connectionOptions;
+    connectionConfig.connectionProperties.mapSize = 2;
     UA_Server_addPubSubConnection(server, &connectionConfig, &connectionIdent);
 }
 
@@ -295,7 +295,7 @@ addPublishedDataSet(UA_Server *server) {
 /* This example only uses two addDataSetField which uses the custom nodes of the XML file
  * (pubDataModel.xml) */
 static void
-addDataSetField(UA_Server *server) {
+_addDataSetField(UA_Server *server) {
     UA_NodeId dataSetFieldIdent;
     UA_DataSetFieldConfig dsfConfig;
     memset(&dsfConfig, 0, sizeof(UA_DataSetFieldConfig));
@@ -670,20 +670,16 @@ int main(int argc, char **argv) {
     if (!interface) {
         UA_LOG_ERROR(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "Need a network interface to run");
         usage(progname);
-        return -1;
+        UA_Server_delete(server);
+        return 0;
     }
 
     networkAddressUrlPub.networkInterface = UA_STRING(interface);
     networkAddressUrlPub.url              = UA_STRING(PUBLISHING_MAC_ADDRESS);
 
-    /* It is possible to use multiple PubSubTransportLayers on runtime.
-     * The correct factory is selected on runtime by the standard defined
-     * PubSub TransportProfileUri's. */
-    UA_ServerConfig_addPubSubTransportLayer(config, UA_PubSubTransportLayerEthernet());
-
     addPubSubConnection(server, &networkAddressUrlPub);
     addPublishedDataSet(server);
-    addDataSetField(server);
+    _addDataSetField(server);
     addWriterGroup(server);
     addDataSetWriter(server);
     UA_Server_freezeWriterGroupConfiguration(server, writerGroupIdent);
@@ -708,8 +704,8 @@ int main(int argc, char **argv) {
         size_t pubLoopVariable               = 0;
         for (pubLoopVariable = 0; pubLoopVariable < measurementsPublisher;
              pubLoopVariable++) {
-            fprintf(fpPublisher, "%ld,%ld.%09ld,%lf\n",
-                    publishCounterValue[pubLoopVariable],
+            fprintf(fpPublisher, "%lu,%ld.%09ld,%lf\n",
+                    (long unsigned)publishCounterValue[pubLoopVariable],
                     publishTimestamp[pubLoopVariable].tv_sec,
                     publishTimestamp[pubLoopVariable].tv_nsec,
                     pressureValues[pubLoopVariable]);
@@ -720,8 +716,8 @@ int main(int argc, char **argv) {
         size_t pubLoopVariable               = 0;
         for (pubLoopVariable = 0; pubLoopVariable < measurementsPublisher;
              pubLoopVariable++) {
-             printf("%ld,%ld.%09ld,%lf\n",
-                    publishCounterValue[pubLoopVariable],
+             printf("%lu,%ld.%09ld,%lf\n",
+                    (long unsigned)publishCounterValue[pubLoopVariable],
                     publishTimestamp[pubLoopVariable].tv_sec,
                     publishTimestamp[pubLoopVariable].tv_nsec,
                     pressureValues[pubLoopVariable]);

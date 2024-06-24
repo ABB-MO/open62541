@@ -54,19 +54,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <linux/types.h>
-#include <sys/io.h>
 #include <getopt.h>
 
 /* For thread operations */
 #include <pthread.h>
 
 #include <open62541/server.h>
+#include <open62541/server_pubsub.h>
 #include <open62541/server_config_default.h>
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/plugin/log.h>
 #include <open62541/types_generated.h>
-#include <open62541/plugin/pubsub_ethernet.h>
-#include <open62541/plugin/pubsub_udp.h>
 
 #include "ua_pubsub.h"
 
@@ -84,12 +82,12 @@
 #define             PUBLISHER_ID                          2235
 #define             WRITER_GROUP_ID                       100
 #define             DATA_SET_WRITER_ID                    62541
-#define             DEFAULT_PUBLISHING_MAC_ADDRESS        "opc.eth://01-00-5E-00-00-01:8.7"
+#define             DEFAULT_PUBLISHING_MAC_ADDRESS        "opc.eth://01-00-5E-00-00-01:8.3"
 #define             DEFAULT_PUBLISHER_MULTICAST_ADDRESS   "opc.udp://224.0.0.32:4840/"
 #define             PUBLISHER_ID_SUB                      2234
 #define             WRITER_GROUP_ID_SUB                   101
 #define             DATA_SET_WRITER_ID_SUB                62541
-#define             DEFAULT_SUBSCRIBING_MAC_ADDRESS       "opc.eth://01-00-5E-7F-00-01:8.7"
+#define             DEFAULT_SUBSCRIBING_MAC_ADDRESS       "opc.eth://01-00-5E-7F-00-01:8.3"
 #define             DEFAULT_SUBSCRIBER_MULTICAST_ADDRESS  "opc.udp://224.0.0.22:4840/"
 #define             REPEATED_NODECOUNTS                   2   // Default to publish 64 bytes
 #define             PORT_NUMBER                           62541
@@ -113,8 +111,8 @@
 #endif
 #define             CLOCKID                               CLOCK_MONOTONIC
 #define             ETH_TRANSPORT_PROFILE                 "http://opcfoundation.org/UA-Profile/Transport/pubsub-eth-uadp"
-#define             UDP_TRANSPORT_PROFILE                 "http://opcfoundation.org/UA-Profile/Transport/pubsub-udp-uadp"                               
-             
+#define             UDP_TRANSPORT_PROFILE                 "http://opcfoundation.org/UA-Profile/Transport/pubsub-udp-uadp"
+
 /* If the Hardcoded publisher/subscriber MAC addresses need to be changed,
  * change PUBLISHING_MAC_ADDRESS and SUBSCRIBING_MAC_ADDRESS
  */
@@ -122,13 +120,8 @@
 /* Set server running as true */
 UA_Boolean        runningServer           = UA_TRUE;
 
-#ifdef UA_ENABLE_PUBSUB_ETH_UADP
 char*             pubUri               = DEFAULT_PUBLISHING_MAC_ADDRESS;
 char*             subUri               = DEFAULT_SUBSCRIBING_MAC_ADDRESS;
-#else
-char*             pubUri               = DEFAULT_PUBLISHER_MULTICAST_ADDRESS;
-char*             subUri               = DEFAULT_SUBSCRIBER_MULTICAST_ADDRESS;
-#endif
 
 static UA_Double  cycleTimeInMsec      = DEFAULT_CYCLE_TIME;
 static UA_Int32   socketPriority       = DEFAULT_SOCKET_PRIORITY;
@@ -138,7 +131,6 @@ static UA_Int32   qbvOffset            = DEFAULT_QBV_OFFSET;
 static UA_Boolean disableSoTxtime      = UA_TRUE;
 static UA_Boolean enableCsvLog         = UA_FALSE;
 static UA_Boolean consolePrint         = UA_FALSE;
-static UA_Boolean enableBlockingSocket = UA_FALSE;
 static UA_Boolean signalTerm           = UA_FALSE;
 
 #ifdef TWO_WAY_COMMUNICATION
@@ -349,7 +341,8 @@ addPubSubConnectionSubscriber(UA_Server *server, UA_String *transportProfile,
     UA_NetworkAddressUrlDataType networkAddressUrlsubscribe = *networkAddressUrlSubscriber;
     connectionConfig.transportProfileUri                    = *transportProfile;
     UA_Variant_setScalar(&connectionConfig.address, &networkAddressUrlsubscribe, &UA_TYPES[UA_TYPES_NETWORKADDRESSURLDATATYPE]);
-    connectionConfig.publisherId.numeric                    = UA_UInt32_random();
+    connectionConfig.publisherIdType                        = UA_PUBLISHERIDTYPE_UINT32;
+    connectionConfig.publisherId.uint32                     = UA_UInt32_random();
     retval |= UA_Server_addPubSubConnection(server, &connectionConfig, &connectionIdentSubscriber);
     if (retval == UA_STATUSCODE_GOOD)
          UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,"The PubSub Connection was created successfully!");
@@ -365,18 +358,6 @@ addReaderGroup(UA_Server *server) {
     memset (&readerGroupConfig, 0, sizeof(UA_ReaderGroupConfig));
     readerGroupConfig.name    = UA_STRING("ReaderGroup");
     readerGroupConfig.rtLevel = UA_PUBSUB_RT_FIXED_SIZE;
-    readerGroupConfig.subscribingInterval = cycleTimeInMsec;
-    /* Timeout is modified when blocking socket is enabled, and the default timeout is used when blocking socket is disabled */
-    if (enableBlockingSocket == UA_FALSE)
-        readerGroupConfig.timeout = 50;  // As we run in 250us cycle time, modify default timeout (1ms) to 50us
-    else {
-        readerGroupConfig.enableBlockingSocket = UA_TRUE;
-        readerGroupConfig.timeout = 0;  //Blocking  socket
-    }
-
-    readerGroupConfig.pubsubManagerCallback.addCustomCallback = addPubSubApplicationCallback;
-    readerGroupConfig.pubsubManagerCallback.changeCustomCallback = changePubSubApplicationCallback;
-    readerGroupConfig.pubsubManagerCallback.removeCustomCallback = removePubSubApplicationCallback;
 
     UA_Server_addReaderGroup(server, connectionIdentSubscriber, &readerGroupConfig,
                              &readerGroupIdentifier);
@@ -584,26 +565,17 @@ addPubSubConnection(UA_Server *server, UA_String *transportProfile,
     connectionConfig.transportProfileUri                    = *transportProfile;
     UA_Variant_setScalar(&connectionConfig.address, &networkAddressUrl,
                          &UA_TYPES[UA_TYPES_NETWORKADDRESSURLDATATYPE]);
-    connectionConfig.publisherId.numeric                    = PUBLISHER_ID;
+    connectionConfig.publisherIdType                        = UA_PUBLISHERIDTYPE_UINT16;
+    connectionConfig.publisherId.uint16                     = PUBLISHER_ID;
 
-#ifdef UA_ENABLE_PUBSUB_ETH_UADP
     /* Connection options are given as Key/Value Pairs - Sockprio and Txtime */
     UA_KeyValuePair connectionOptions[2];
-#else
-    UA_KeyValuePair connectionOptions[1];
-#endif
     connectionOptions[0].key = UA_QUALIFIEDNAME(0, "sockpriority");
     UA_Variant_setScalar(&connectionOptions[0].value, &socketPriority, &UA_TYPES[UA_TYPES_UINT32]);
-#ifdef UA_ENABLE_PUBSUB_ETH_UADP
     connectionOptions[1].key = UA_QUALIFIEDNAME(0, "enablesotxtime");
     UA_Variant_setScalar(&connectionOptions[1].value, &disableSoTxtime, &UA_TYPES[UA_TYPES_BOOLEAN]);
-#endif
-    connectionConfig.connectionProperties     = connectionOptions;
-#ifdef UA_ENABLE_PUBSUB_ETH_UADP
-    connectionConfig.connectionPropertiesSize = 2;
-#else
-    connectionConfig.connectionPropertiesSize = 1;
-#endif
+    connectionConfig.connectionProperties.map = connectionOptions;
+    connectionConfig.connectionProperties.mapSize = 2;
 
     UA_Server_addPubSubConnection(server, &connectionConfig, &connectionIdent);
 }
@@ -620,7 +592,7 @@ addPublishedDataSet(UA_Server *server) {
 
 /* DataSetField handling */
 static void
-addDataSetField(UA_Server *server) {
+_addDataSetField(UA_Server *server) {
     /* Add a field to the previous created PublishedDataSet */
     UA_NodeId dataSetFieldIdent1;
     UA_DataSetFieldConfig dataSetFieldConfig;
@@ -870,7 +842,7 @@ void userApplication(UA_UInt64 monotonicOffsetValue) {
 #endif
     }
 
-    /* *runningPub variable made false and send to the publisher application which is running in another node 
+    /* *runningPub variable made false and send to the publisher application which is running in another node
        which will close the application during blocking socket condition */
     if (signalTerm == UA_TRUE) {
 #ifdef TWO_WAY_COMMUNICATION
@@ -1158,8 +1130,6 @@ static void usage(char *appname)
         " -disableSoTxtime            Do not use SO_TXTIME\n"
         " -enableCsvLog               Experimental: To log the data in csv files. Support up to 1 million samples\n"
         " -enableconsolePrint         Experimental: To print the data in console output. Support for higher cycle time\n"
-        " -enableBlockingSocket       Run application with blocking socket option. While using blocking socket option need to\n"
-        "                             run both the Publisher and Loopback application. Otherwise application will not terminate.\n"
         "\n",
         appname, DEFAULT_CYCLE_TIME, DEFAULT_SOCKET_PRIORITY, \
         DEFAULT_PUBSUBAPP_THREAD_PRIORITY, \
@@ -1205,7 +1175,6 @@ int main(int argc, char **argv) {
         {"disableSoTxtime",      no_argument,       0, 'k'},
         {"enableCsvLog",         no_argument,       0, 'l'},
         {"enableconsolePrint",   no_argument,       0, 'm'},
-        {"enableBlockingSocket", no_argument,       0, 'n'},
         {"help",                 no_argument,       0, 'o'},
         {0,                      0,                 0,  0 }
     };
@@ -1251,10 +1220,6 @@ int main(int argc, char **argv) {
             case 'm':
                 consolePrint = UA_TRUE;
                 break;
-            case 'n':
-                /* TODO: Application need to be exited independently */
-                enableBlockingSocket = UA_TRUE;
-                break;
             case 'o':
                 usage(progname);
                 return -1;
@@ -1298,11 +1263,7 @@ int main(int argc, char **argv) {
     UA_NetworkAddressUrlDataType networkAddressUrlSub;
     networkAddressUrlSub.networkInterface = UA_STRING(interface);
     networkAddressUrlSub.url              = UA_STRING(subUri);
-#ifdef UA_ENABLE_PUBSUB_ETH_UADP
     transportProfile = UA_STRING(ETH_TRANSPORT_PROFILE);
-#else
-    transportProfile = UA_STRING(UDP_TRANSPORT_PROFILE);
-#endif
 
     if (enableCsvLog)
         fpSubscriber                  = fopen(fileSubscribedData, "w");
@@ -1310,13 +1271,8 @@ int main(int argc, char **argv) {
 #ifdef TWO_WAY_COMMUNICATION
     if (enableCsvLog)
         fpPublisher                   = fopen(filePublishedData, "w");
+#endif
 
-#ifdef UA_ENABLE_PUBSUB_ETH_UADP
-    UA_ServerConfig_addPubSubTransportLayer(config, UA_PubSubTransportLayerEthernet());
-#else
-    UA_ServerConfig_addPubSubTransportLayer(config, UA_PubSubTransportLayerUDPMP());
-#endif
-#endif
     /* Initialize arguments required for the thread to run */
     threadArgPubSub1 = (threadArgPubSub *) UA_malloc(sizeof(threadArgPubSub));
 
@@ -1327,17 +1283,11 @@ int main(int argc, char **argv) {
 #ifdef TWO_WAY_COMMUNICATION
     addPubSubConnection(server, &transportProfile, &networkAddressUrlPub);
     addPublishedDataSet(server);
-    addDataSetField(server);
+    _addDataSetField(server);
     addWriterGroup(server);
     addDataSetWriter(server);
     UA_Server_freezeWriterGroupConfiguration(server, writerGroupIdent);
     UA_Server_setWriterGroupOperational(server, writerGroupIdent);
-#endif
-
-#ifdef UA_ENABLE_PUBSUB_ETH_UADP
-    UA_ServerConfig_addPubSubTransportLayer(config, UA_PubSubTransportLayerEthernet());
-#else
-    UA_ServerConfig_addPubSubTransportLayer(config, UA_PubSubTransportLayerUDPMP());
 #endif
 
     addPubSubConnectionSubscriber(server, &transportProfile, &networkAddressUrlSub);

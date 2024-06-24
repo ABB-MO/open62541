@@ -10,6 +10,7 @@
 #include "server/ua_subscription.h"
 
 #include <check.h>
+#include <stdlib.h>
 
 #include "testing_clock.h"
 
@@ -42,6 +43,7 @@ createSession(void) {
 
 static void setup(void) {
     server = UA_Server_new();
+    ck_assert(server != NULL);
     UA_ServerConfig *config = UA_Server_getConfig(server);
     UA_ServerConfig_setDefault(config);
     config->monitoredItemRegisterCallback = monitoredRegisterCallback;

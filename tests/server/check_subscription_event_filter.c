@@ -14,6 +14,8 @@
 #include <open62541/client_subscriptions.h>
 
 #include <check.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "testing_clock.h"
 #include "thread_wrapper.h"
@@ -162,6 +164,7 @@ THREAD_CALLBACK(serverloop) {
         UA_Server_run_iterate(server, false);
         serverIterations++;
         serverMutexUnlock();
+        UA_realSleep(1);
     }
     return 0;
 }
@@ -191,6 +194,7 @@ static void setup(void){
     }
     running = true;
     server = UA_Server_new();
+    ck_assert(server != NULL);
     UA_ServerConfig *config = UA_Server_getConfig(server);
     UA_ServerConfig_setDefault(config);
 
@@ -482,14 +486,12 @@ START_TEST(selectFilterValidation) {
     UA_QualifiedName_clear(&filter.selectClauses->browsePath[0]);
     UA_MonitoredItemCreateResult_clear(&createResult);
 
-    filter.selectClauses->browsePath[0] = UA_QUALIFIEDNAME_ALLOC(0, "");
+    filter.selectClauses->browsePath[0] = UA_QUALIFIEDNAME_ALLOC(0, "xx");
     createResult = addMonitoredItem(handler_events_simple, &filter, true);
     ck_assert_uint_eq(createResult.statusCode, UA_STATUSCODE_BADNODEIDUNKNOWN);
     UA_MonitoredItemCreateResult_clear(&createResult);
 
-    UA_QualifiedName_delete(&filter.selectClauses->browsePath[0]);
-    filter.selectClauses->browsePath = NULL;
-    filter.selectClauses->browsePathSize = 0;
+    UA_QualifiedName_clear(&filter.selectClauses->browsePath[0]);
     createResult = addMonitoredItem(handler_events_simple, &filter, true);
     ck_assert_uint_eq(createResult.statusCode, UA_STATUSCODE_BADBROWSENAMEINVALID);
     UA_MonitoredItemCreateResult_clear(&createResult);
@@ -628,7 +630,7 @@ START_TEST(ofTypeOperatorValidation_failure) {
 
     /*  add a monitored item (with filter) */
     UA_MonitoredItemCreateResult createResult = addMonitoredItem(handler_events_simple, &filter, true);
-    ck_assert_uint_eq(createResult.statusCode, UA_STATUSCODE_BADNODEIDINVALID);
+    ck_assert_uint_eq(createResult.statusCode, UA_STATUSCODE_BADFILTEROPERANDINVALID);
     UA_MonitoredItemCreateResult_clear(&createResult);
     UA_EventFilter_clear(&filter);
 } END_TEST
@@ -840,7 +842,7 @@ START_TEST(inListOperatorValidation) {
 static Suite *testSuite_Client(void) {
     Suite *s = suite_create("Server Subscription Event Filters");
     TCase *tc_server = tcase_create("Basic Event Filters");
-    tcase_add_unchecked_fixture(tc_server, setup, teardown);
+    tcase_add_checked_fixture(tc_server, setup, teardown);
     tcase_add_test(tc_server, selectFilterValidation);
     tcase_add_test(tc_server, notOperatorValidation);
     tcase_add_test(tc_server, ofTypeOperatorValidation);
@@ -851,7 +853,6 @@ static Suite *testSuite_Client(void) {
     tcase_add_test(tc_server, orderedCompareOperatorValidation);
     tcase_add_test(tc_server, betweenOperatorValidation);
     tcase_add_test(tc_server, inListOperatorValidation);
-
     suite_add_tcase(s, tc_server);
     return s;
 }
