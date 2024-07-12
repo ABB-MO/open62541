@@ -135,6 +135,7 @@ typedef struct {
                                          const UA_NodeId *sourceNodeId,
                                          const UA_NodeId *targetParentNodeId,
                                          const UA_NodeId *referenceTypeId,
+                                         const UA_QualifiedName *targetBrowseName,
                                          UA_NodeId *targetNodeId);
 } UA_GlobalNodeLifecycle;
 

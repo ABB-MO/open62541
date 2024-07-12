@@ -687,7 +687,7 @@ copyChild(UA_Server *server, UA_Session *session,
             retval = server->config.nodeLifecycle.
                 generateChildNodeId(server, &session->sessionId, session->sessionHandle,
                                     &rd->nodeId.nodeId, destinationNodeId,
-                                    &rd->referenceTypeId, &node->head.nodeId);
+                                    &rd->referenceTypeId, &node->head.browseName, &node->head.nodeId);
             UA_LOCK(&server->serviceMutex);
             if(retval != UA_STATUSCODE_GOOD) {
                 UA_NODESTORE_DELETE(server, node);
