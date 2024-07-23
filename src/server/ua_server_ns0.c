@@ -934,6 +934,10 @@ initNS0(UA_Server *server) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
+    if(NULL != server->config.notifyNs0Bootstrap) {
+        retVal |= server->config.notifyNs0Bootstrap(server);
+    }
+
     /* NamespaceArray */
     UA_DataSource namespaceDataSource = {readNamespaces, writeNamespaces};
     retVal |= setVariableNode_dataSource(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_NAMESPACEARRAY),
@@ -1150,7 +1154,9 @@ initNS0(UA_Server *server) {
     deleteNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_LOCALTIME), true);
 #endif
     deleteNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_REQUESTSERVERSTATECHANGE), true);
+#ifndef UA_ENABLE_SERVER_CONFIGURATION
     deleteNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERCONFIGURATION), true);
+#endif
     deleteNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SETSUBSCRIPTIONDURABLE), true);
 
 #ifdef UA_ENABLE_DIAGNOSTICS

@@ -274,11 +274,15 @@ UA_Server_editNode(UA_Server *server, UA_Session *session,
                    void *data) {
 #ifndef UA_ENABLE_IMMUTABLE_NODES
     /* Get the node and process it in-situ */
+    UA_LOCK(&server->serviceMutex);
     const UA_Node *node = UA_NODESTORE_GET(server, nodeId);
-    if(!node)
+    if(!node) {
+        UA_UNLOCK(&server->serviceMutex);
         return UA_STATUSCODE_BADNODEIDUNKNOWN;
+    }
     UA_StatusCode retval = callback(server, session, (UA_Node*)(uintptr_t)node, data);
     UA_NODESTORE_RELEASE(server, node);
+    UA_UNLOCK(&server->serviceMutex);
     return retval;
 #else
     UA_StatusCode retval;
@@ -423,4 +427,3 @@ const UA_ViewAttributes UA_ViewAttributes_default = {
     false,                  /* containsNoLoops */
     0                       /* eventNotifier */
 };
-

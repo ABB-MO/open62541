@@ -103,6 +103,13 @@ struct UA_ServerConfig {
     void (*notifyLifecycleState)(UA_Server *server, UA_LifecycleState state);
 
     /**
+     * NS0 bootstrapping
+     * ^^^^^^^^^^^^^^^^ */
+    /* Notify that NS0 structure is established and get linked to backend logic
+     * now */
+    UA_StatusCode (*notifyNs0Bootstrap)(UA_Server *server);
+
+    /**
      * Rule Handling
      * ^^^^^^^^^^^^^
      * Override the handling of standard-defined behavior. These settings are
