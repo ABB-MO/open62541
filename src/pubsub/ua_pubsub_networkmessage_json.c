@@ -12,6 +12,8 @@
 #include "ua_pubsub_networkmessage.h"
 #include "ua_types_encoding_json.h"
 
+#ifdef UA_ENABLE_PUBSUB
+
 /* Json keys for dsm */
 const char * UA_DECODEKEY_MESSAGES = "Messages";
 const char * UA_DECODEKEY_MESSAGETYPE = "MessageType";
@@ -530,3 +532,5 @@ UA_NetworkMessage_decodeJson(UA_NetworkMessage *dst, const UA_ByteString *src) {
         UA_free((void*)(uintptr_t)ctx.tokens);
     return ret;
 }
+
+#endif /* UA_ENABLE_PUBSUB */
